@@ -14,7 +14,7 @@ module Suj
       end
 
       def payload
-        @payload ||= MultiJson.dump(@options[:aps] || {})
+        @payload ||= MultiJson.dump(@options[:data] || {})
       end
 
       def data

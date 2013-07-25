@@ -33,8 +33,10 @@ msg = {
   apn_ids: ["0F93C49EAAF3544B5218D2BAE893608C515F69B445279AB2B17511C37046C52B"],
   development: true,
   cert: File.read(pemfile),
-  aps: {
-    alert: "Hahahaha I am going to spam you. #{rand * 100}"
+  data: {
+    aps: {
+      alert: "Hahahaha I am going to spam you. #{rand * 100}"
+    }
   }
 }
 
