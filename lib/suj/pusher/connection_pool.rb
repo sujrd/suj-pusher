@@ -29,9 +29,10 @@ module Suj
       end
 
       def gcm_connection(options = {})
-        api_key = options[:api_key]
+        # All GCM connections are unique, even if they are to the same app.
+        api_key = "#{options[:api_key]}#{rand * 100}"
         info "GCM connection #{api_key}"
-        @pool[api_key] ||= Suj::Pusher::GCMConnection.new(@pool, options)
+        @pool[api_key] ||= Suj::Pusher::GCMConnection.new(self, api_key, options)
       end
 
       def remove_connection(key)
