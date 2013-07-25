@@ -1,0 +1,33 @@
+PATH
+  remote: .
+  specs:
+    suj_pusher (0.0.1)
+      em-hiredis
+      em-http-request
+      multi_json
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    addressable (2.3.5)
+    cookiejar (0.3.0)
+    em-hiredis (0.2.1)
+      hiredis (~> 0.4.0)
+    em-http-request (1.1.0)
+      addressable (>= 2.3.4)
+      cookiejar
+      em-socksify (>= 0.3)
+      eventmachine (>= 1.0.3)
+      http_parser.rb (>= 0.6.0.beta.2)
+    em-socksify (0.3.0)
+      eventmachine (>= 1.0.0.beta.4)
+    eventmachine (1.0.3)
+    hiredis (0.4.5)
+    http_parser.rb (0.6.0.beta.2)
+    multi_json (1.7.7)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  suj_pusher!

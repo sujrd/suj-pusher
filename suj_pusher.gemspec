@@ -16,5 +16,7 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  s.add_dependency "rapns", "~> 3.3.2"
+  s.add_dependency "em-http-request"
+  s.add_dependency "em-hiredis"
+  s.add_dependency "multi_json"
 end
