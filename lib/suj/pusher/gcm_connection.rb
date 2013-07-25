@@ -7,28 +7,31 @@ module Suj
 
       GATEWAY = "https://android.googleapis.com/gcm/send"
 
-      def initialize(pool, options = {})
-        super
+      def initialize(pool, key, options = {})
         @pool = pool
         @options = options
-        @api_key = options[:api_key]
+        @key = key
         @headers =  {
           'Content-Type' => 'application/json',
-          'Authorization' => @api_key
+          'Authorization' => "key=#{options[:api_key]}"
         }
       end
 
       def deliver(msg)
+
+        return if msg[:gcm_ids].empty?
+
         body = MultiJson.dump({
           registration_ids: msg[:gcm_ids],
-          data: msg[:data]
+          data: msg[:data] || {}
         })
 
-        http = EventMachine::HttpRequest.new(GCM_GATEWAY).post( head: @headers, body: body )
+
+        http = EventMachine::HttpRequest.new(GATEWAY).post( head: @headers, body: body )
 
         http.errback do
           error "GCM network error"
-          @pool.remove_connection(@api_key)
+          @pool.remove_connection(@key)
         end
         http.callback do
           if http.response_header.status != 200
@@ -38,7 +41,7 @@ module Suj
             info "GCM push notification send"
             info http.response
           end
-          @pool.remove_connection(@api_key)
+          @pool.remove_connection(@key)
         end
       end
     end
