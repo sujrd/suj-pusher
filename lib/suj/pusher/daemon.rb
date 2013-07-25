@@ -2,7 +2,6 @@ require 'thread'
 require 'socket'
 require 'pathname'
 require 'openssl'
-require 'net/http/persistent'
 require 'em-hiredis'
 require "multi_json"
 require 'fileutils'
