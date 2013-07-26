@@ -1,6 +1,7 @@
 module Suj
   module Pusher
     class ApnNotification
+      include Suj::Pusher::Logger
       MAX_SIZE = 256
 
       class InvalidToken < StandardError; end
@@ -28,7 +29,7 @@ module Suj
         expiry = 0
         size = [payload].pack("a*").size
         data_array = [1, identifier, expiry, 32, @token, size, payload]
-        Suj::Pusher.logger.info("PAYLOAD: #{data_array}")
+        info("PAYLOAD: #{data_array}")
         data_array.pack("cNNnH*na*")
       end
 

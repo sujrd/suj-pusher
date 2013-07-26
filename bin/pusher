@@ -3,39 +3,39 @@
 require 'optparse'
 require 'suj/pusher'
 require 'fileutils'
+require 'daemon_spawn'
 
-config = Suj::Pusher::Configuration.new
 
-BANNER = "Usage: pusher [options] start|stop|restart|status"
+BANNER = "Usage: pusher start|stop|restart|status [options]"
+WORKDIR = Dir.pwd
 
-ARGV.options do |opts|
-  opts.banner = BANNER
-  opts.on('-f', '--foreground', 'Run in the foreground.') { config.foreground = true }
-  opts.on('-r REDIS', '--redis REDIS', String, 'Redis server to connect') { |redis| config.redis = redis }
-  opts.on('-p PATH', '--pid-file PATH', String, 'Path to write PID file. Relative to Rails root unless absolute.') { |path| config.pid_file = path }
-  opts.on('-v', '--version', 'Print this version of rapns.') { puts "rapns #{Suj::Pusher::VERSION}"; exit }
-  opts.on('-h', '--help', 'You\'re looking at it.') { puts opts; exit }
-  opts.parse!
+class PusherDaemon < DaemonSpawn::Base
+  def start(args)
+    config = Suj::Pusher::Configuration.new
+    args.options do |opts|
+      opts.banner = BANNER
+      opts.on('-r REDIS', '--redis REDIS', String, 'Redis server to connect') { |redis| config.redis = redis }
+      opts.on('-v', '--version', 'Print this version of rapns.') { puts "rapns #{Suj::Pusher::VERSION}"; exit }
+      opts.on('-h', '--help', 'You\'re looking at it.') { puts opts; exit }
+      opts.parse!
+    end
+
+    config.certs_path = File.join(WORKDIR, "certs")
+    FileUtils.mkdir_p(config.certs_path)
+    FileUtils.mkdir_p(File.join(WORKDIR, "logs"))
+    FileUtils.mkdir_p(File.join(WORKDIR, "tmp/pids"))
+    Suj::Pusher.config.update(config)
+
+    @daemon = Suj::Pusher::Daemon.new
+    @daemon.start
+  end
+
+  def stop
+    @daemon.stop
+  end
 end
 
-if ARGV.empty?
-  puts BANNER
-  exit 1
-end
-
-Suj::Pusher.config.update(config)
-
-FileUtils.mkdir_p(Suj::Pusher.config.certs_path, mode: 700)
-
-case ARGV.first
-when "start"
-  Suj::Pusher::Daemon.start
-when "stop"
-  Suj::Pusher::Daemon.stop
-when "restart"
-  Suj::Pusher::Daemon.restart
-when "status"
-  Suj::Pusher::Daemon.status
-else
-  puts BANNER
-end
+PusherDaemon.spawn!(
+  sync_log: true,
+  working_dir: Dir.pwd
+)

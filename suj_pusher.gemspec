@@ -19,4 +19,5 @@ Gem::Specification.new do |s|
   s.add_dependency "em-http-request"
   s.add_dependency "em-hiredis"
   s.add_dependency "multi_json"
+  s.add_dependency "daemon-spawn"
 end
