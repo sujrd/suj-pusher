@@ -15,12 +15,5 @@ module Suj
 
     QUEUE = "suj_pusher_queue"
 
-    def self.logger
-      @logger || Suj::Pusher.config.logger
-    end
-
-    def self.logger=(logger)
-      @logger = logger
-    end
   end
 end
