@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 require "suj/pusher/version"
 
 Gem::Specification.new do |s|
-  s.name        = "suj_pusher"
+  s.name        = "suj-pusher"
   s.version     = Suj::Pusher::VERSION
   s.authors     = ["Horacio Sanson"]
   s.email       = ["rd@skillupjapan.co.jp"]
