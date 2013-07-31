@@ -41,11 +41,15 @@ module Suj
       end
 
       def deliver(data)
-        @notification = Suj::Pusher::ApnNotification.new(data)
-        if ! disconnected?
-          info "APN delivering data"
-          send_data(@notification.data)
-          @notification = nil
+        begin
+          @notification = Suj::Pusher::ApnNotification.new(data)
+          if ! disconnected?
+            info "APN delivering data"
+            send_data(@notification.data)
+            @notification = nil
+          end
+        rescue => e
+          error "Failed to deliver notifiation : #{e}"
         end
       end
 
