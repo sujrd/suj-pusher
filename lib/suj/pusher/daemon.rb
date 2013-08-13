@@ -11,6 +11,8 @@ module Suj
     class Daemon
       include Suj::Pusher::Logger
 
+      FEEDBACK_TIME = 43200  # 12H
+
       def start
         info "Starting pusher daemon"
         EM.run do
@@ -18,8 +20,12 @@ module Suj
             begin
               data = Hash.symbolize_keys(MultiJson.load(msg))
               send_notification(data)
+              retrieve_feedback(data)
             rescue MultiJson::LoadError
               warn("Received invalid json data, discarding msg")
+            rescue => e
+              error("Error sending notification : #{e}")
+              error e.backtrace
             end
           end
         end
@@ -56,6 +62,16 @@ module Suj
         end
       end
 
+      def retrieve_feedback(msg)
+        if msg.has_key?(:cert)
+          if msg.has_key?(:development) && msg[:development]
+            feedback_sandbox_connection(msg)
+          else
+            feedback_connection(msg)
+          end
+        end
+      end
+
       def send_apn_notification(msg)
         info "Sending APN notification via connection #{Digest::SHA1.hexdigest(msg[:cert])}"
         conn = pool.apn_connection(msg)
@@ -70,6 +86,20 @@ module Suj
         msg[:apn_ids].each do |apn_id|
           conn.deliver(msg.merge({token: apn_id}))
         end
+      end
+
+      def feedback_connection(msg)
+        return if @last_feedback and (Time.now - @last_feedback < FEEDBACK_TIME)
+        info "Get feedback information"
+        conn = pool.feedback_connection(msg)
+        @last_feedback = Time.now
+      end
+
+      def feedback_sandbox_connection(msg)
+        return if @last_sandbox_feedback and (Time.now - @last_sandbox_feedback < FEEDBACK_TIME)
+        info "Get feedback sandbox information"
+        conn = pool.feedback_sandbox_connection(msg)
+        @last_sandbox_feedback = Time.now
       end
 
       def send_gcm_notification(msg)

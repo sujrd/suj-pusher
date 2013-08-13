@@ -9,7 +9,10 @@ module Suj
 
       APN_SANDBOX = "gateway.sandbox.push.apple.com"
       APN_GATEWAY = "gateway.push.apple.com"
+      FEEDBACK_SANDBOX = "feedback.sandbox.push.apple.com"
+      FEEDBACK_GATEWAY = "feedback.push.apple.com"
       APN_PORT = 2195
+      FEEDBACK_PORT = 2196
 
       def initialize(daemon)
         @pool = {}
@@ -26,6 +29,16 @@ module Suj
         cert = Digest::SHA1.hexdigest options[:cert]
         info "APN connection #{cert}"
         @pool[cert] ||= EM.connect(APN_SANDBOX, APN_PORT, APNConnection, self, options)
+      end
+
+      def feedback_connection(options = {})
+        info "Feedback connection"
+        EM.connect(FEEDBACK_GATEWAY, FEEDBACK_PORT, APNFeedbackConnection, options)
+      end
+
+      def feedback_sandbox_connection(options = {})
+        info "Feedback sandbox connection"
+        EM.connect(FEEDBACK_SANDBOX, FEEDBACK_PORT, APNFeedbackConnection, options)
       end
 
       def gcm_connection(options = {})

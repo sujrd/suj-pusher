@@ -47,9 +47,13 @@ module Suj
             info "APN delivering data"
             send_data(@notification.data)
             @notification = nil
+            info "APN delivered data"
           end
-        rescue => e
-          error "Failed to deliver notifiation : #{e}"
+        rescue Suj::Pusher::ApnNotification::PayloadTooLarge => e
+          error "APN notification payload too large."
+          debug @notification.data.inspect
+        rescue => ex
+          error "APN notification error : #{ex}"
         end
       end
 
