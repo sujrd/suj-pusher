@@ -48,6 +48,8 @@ module Suj
             send_data(@notification.data)
             @notification = nil
             info "APN delivered data"
+          else
+            info "APN connection unavailable"
           end
         rescue Suj::Pusher::ApnNotification::PayloadTooLarge => e
           error "APN notification payload too large."
@@ -75,9 +77,10 @@ module Suj
         info "APN Connection established..."
         @disconnected = false
         if ! @notification.nil?
-          info "APN delivering data"
+          info "EST - APN delivering data"
           send_data(@notification.data)
           @notification = nil
+          info "EST - APN delivered data"
         end
       end
 
@@ -85,7 +88,7 @@ module Suj
         info "APN Connection closed..."
         @disconnected = true
         FileUtils.rm_f(@cert_file)
-        @pool.remove_connection(@cert)
+        @pool.remove_connection(@cert_key)
       end
     end
   end
