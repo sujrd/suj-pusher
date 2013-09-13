@@ -18,9 +18,12 @@ module Suj
         EM.run do
           wait_msg do |msg|
             begin
+              info "RECEIVED MESSAGE"
               data = Hash.symbolize_keys(MultiJson.load(msg))
               send_notification(data)
+              info "SENT MESSAGE"
               retrieve_feedback(data)
+              info "FINISHED FEEDBACK RETRIEVAL"
             rescue MultiJson::LoadError
               warn("Received invalid json data, discarding msg")
             rescue => e
@@ -43,8 +46,19 @@ module Suj
       private
 
       def wait_msg
+        redis.on(:connected) { info "REDIS - Connected to Redis server" }
+        redis.on(:closed) { info "REDIS - Closed connection to Redis server" }
+        redis.on(:failed) { info "REDIS - redis connection FAILED" }
+        redis.on(:reconnected) { info "REDIS - Reconnected to Redis server" }
+        redis.on(:disconnected) { info "REDIS - Disconnected from Redis server" }
+        redis.on(:reconnect_failed) { info "REDIS - Reconnection attempt to Redis server FAILED" }
+        # EM.add_periodic_timer(30) { redis.publish Suj::Pusher::QUEUE, "ECHO" }
         redis.pubsub.subscribe(Suj::Pusher::QUEUE) do |msg|
-          yield msg
+          if msg == "ECHO"
+            info "REDIS - ECHO Received"
+          else
+            yield msg
+          end
         end
       end
 
@@ -109,7 +123,7 @@ module Suj
       end
 
       def redis
-        @redis || EM::Hiredis.connect(Suj::Pusher.config.redis)
+        @redis ||= EM::Hiredis.connect(Suj::Pusher.config.redis)
       end
 
       def pool
