@@ -50,7 +50,7 @@ module Suj
 
       def remove_connection(key)
         info "Removing connection #{key}"
-        @pool.delete(key)
+        info "Connection not found" unless @pool.delete(key)
       end
 
     end

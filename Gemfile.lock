@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    suj_pusher (0.0.1)
+    suj-pusher (0.0.1)
       daemon-spawn
       em-hiredis
       em-http-request
@@ -32,4 +32,4 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  suj_pusher!
+  suj-pusher!
