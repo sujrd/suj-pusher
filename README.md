@@ -62,13 +62,14 @@ Once the pusher daemon is running and connected to your redis server you can pus
 
 Example JSON message:
 
-```json
+```
 {
   'apn_ids': ["xxxxx"],
   'gcm_ids': ["xxxxx", "yyyyyy"],
   'development': true,
   'cert': "cert string",
   'api_key': "secret key",
+  'time_to_live': 0,
   'data': {
     'aps': {
       'alert': "This is a message"
@@ -82,6 +83,7 @@ Example JSON message:
 - development: This can be true or false and indicates if the push notification is to be sent using the APN sandbox gateway (yes) or the APN production gateway (no). This option only affects push notifications to iOS devices and is assumed yes if not provided.
 - cert: This is a string representation of the certificate used to send push notifications via the APN network. Simply read the cert.pem file as string and plug it in this field.
 - api_key: This is the secret api_key used to send push notifications via the GCM network. This is the key you get from the Google API console.
+- time_to_live: Time in seconds the message would be stored on the cloud in case the destination device is not available at the moment. The default value is zero that means the message is discarded if the destination is not reachable at the moment the notification is sent. Note that even if you set this value larger than zero there are limitations that may prevent the message from arriving. For example Google allows to store up to 4 sync messages or 100 payload messages for up to time_to_live messages or max 4 weeks while Apple only stores the last message up to to time_to_live seconds.
 - data: This is a custom hash that is sent as push notification to the devices. For GCM this hash may contain anything you want as long as its size do not exceed 4096. For APN this data hash MUST contain an *aps* hash that follows Apple push notification format.
 
 #### Apple *aps* hash
