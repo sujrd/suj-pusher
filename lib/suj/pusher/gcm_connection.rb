@@ -23,9 +23,9 @@ module Suj
 
         body = MultiJson.dump({
           registration_ids: msg[:gcm_ids],
+          time_to_live: msg[:time_to_live] || 0,
           data: msg[:data] || {}
         })
-
 
         http = EventMachine::HttpRequest.new(GATEWAY).post( head: @headers, body: body )
 
