@@ -56,6 +56,15 @@ module Suj
         redis.pubsub.subscribe(Suj::Pusher::QUEUE) do |msg|
           if msg == "ECHO"
             info "REDIS - ECHO Received"
+          elsif msg == "PUSH_MSG"
+            info "REDIS - PUSH_MSG Received"
+            get_message.callback do |message|
+              if message
+                yield message
+              else
+                info "REDIS - PUSH_MSG Queue was empty"
+              end
+            end
           else
             yield msg
           end
@@ -124,6 +133,11 @@ module Suj
 
       def redis
         @redis ||= EM::Hiredis.connect(Suj::Pusher.config.redis)
+      end
+
+      def get_message
+        @redis_connection ||= EM::Hiredis.connect(Suj::Pusher.config.redis)
+        @redis_connection.rpop MSG_QUEUE
       end
 
       def pool
