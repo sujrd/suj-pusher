@@ -14,7 +14,7 @@ require 'logger'
 module Suj
   module Pusher
 
-    QUEUE = "suj_pusher_queue"
-
+    QUEUE     = "suj_pusher_queue"
+    MSG_QUEUE = "suj_pusher_msgs"
   end
 end
