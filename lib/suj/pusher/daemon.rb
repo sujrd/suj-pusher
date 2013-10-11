@@ -15,7 +15,7 @@ module Suj
 
       def start
         info "Starting pusher daemon"
-        info " subsribe to push messages from #{Suj::Pusher.config.redis}"
+        info " subsribe to push messages from #{redis_url} namespace #{redis_namespace}"
         EM.run do
           wait_msg do |msg|
             begin
@@ -47,14 +47,14 @@ module Suj
       private
 
       def wait_msg
-        redis.on(:connected) { info "REDIS - Connected to Redis server" }
+        redis.on(:connected) { info "REDIS - Connected to Redis server #{redis_url}" }
         redis.on(:closed) { info "REDIS - Closed connection to Redis server" }
         redis.on(:failed) { info "REDIS - redis connection FAILED" }
         redis.on(:reconnected) { info "REDIS - Reconnected to Redis server" }
         redis.on(:disconnected) { info "REDIS - Disconnected from Redis server" }
         redis.on(:reconnect_failed) { info "REDIS - Reconnection attempt to Redis server FAILED" }
         # EM.add_periodic_timer(30) { redis.publish Suj::Pusher::QUEUE, "ECHO" }
-        redis.pubsub.subscribe(Suj::Pusher::QUEUE) do |msg|
+        redis.pubsub.subscribe("#{redis_namespace}:#{Suj::Pusher::QUEUE}") do |msg|
           if msg == "ECHO"
             info "REDIS - ECHO Received"
           elsif msg == "PUSH_MSG"
@@ -132,13 +132,21 @@ module Suj
         conn.deliver(msg)
       end
 
+      def redis_url
+        @redis_url ||= "redis://#{Suj::Pusher.config.redis_host}:#{Suj::Pusher.config.redis_port}/#{Suj::Pusher.config.redis_db}"
+      end
+
+      def redis_namespace
+        Suj::Pusher.config.redis_namespace
+      end
+
       def redis
-        @redis ||= EM::Hiredis.connect(Suj::Pusher.config.redis)
+        @redis ||= EM::Hiredis.connect(redis_url)
       end
 
       def get_message
-        @redis_connection ||= EM::Hiredis.connect(Suj::Pusher.config.redis)
-        @redis_connection.rpop MSG_QUEUE
+        @redis_connection ||= EM::Hiredis.connect(redis_url)
+        @redis_connection.rpop "#{redis_namespace}:#{MSG_QUEUE}"
       end
 
       def pool
