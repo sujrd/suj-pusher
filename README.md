@@ -40,23 +40,35 @@ pusher start|stop|restart|status  <options>
 ```
 
 options:
-  - -r <REDIS>: The redis server used to receive push notification messages. The default is localhost:6379.
+  - -H <redis host>: The redis server host or IP address where push messages are stored. Defaults to localhost.
+  - -P <redis port>: Port number of the redis server where push messages are stored. Defaults to 6379.
+  - -b <redis db>: The database number on the redis server to connect to. Defaults to 0.
+  - -n <redis namespace>: A namespace separate pusher queues from others in redis. Defaults to pusher.
+  - -l <logdir>: The directory where logfiles are stored. Defaults to $PWD/logs.
+  - -p <piddir>: The directory where pid files are stored. Defaults to $PWD/pids.
+  - -c <certs>: The directory where we temporarily store APN certs. Defaults to $PWD/certs.
 
-Note that the daemon will run on your current folder and under the current user. Make sure you cd to a folder (e.g. /var/run/pusher) and that your current user has permissions to create folders/files inside that directory:
+The pusher daemon runs under the current user and current folder. If you specify the logid, piddir and certs folders make sure these exists and that the current user can create/write files inside those folder.
+
+To start the server run:
 
 ```
-mkdir /var/run/pusher
-chown pusher_user:pusher_group /var/run/pusher
-cd /var/run/pusher
-/usr/bin/pusher start -r redis://192.168.x.x:6379/namespace
+/path/to/bin/pusher start -H localhost -P 6379 -b 0 -n pusher -p /var/run/pids
 ```
 
-The pusher daemon creates a logs, tmp and certs directory in the current path. To check the state of the daemon you may check the logs. We store the APN certs inside the certs directory temporarily during the connection to APN and delete them when the connection is closed. Still make sure this folder is only readable/writeable by the user under which the pusher process is running.
+To stop the server run:
+
+```
+/path/to/bin/pusher start -H localhost -P 6379 -b 0 -n pusher -p /var/run/pids
+```
+
+If you set a piddir (using -p option) when starting the server then you must supply the same option when stopping or restarting the server.
+
+The certs option (-c) is to temporarily store APN certificates. These are deleted when the APN connection is closed.
 
 ## Sending Notifications
 
 Once the pusher daemon is running and connected to your redis server you can push notifications by publishing messages to redis. The message format is a simple JSON string.
-
 
 ### JSON string format
 
@@ -134,18 +146,23 @@ msg_json = MultiJson.dump(msg)
 redis = Redis.new({ host: "localhost", port: 6379})
 
 # Push the message to the *suj_pusher_queue* in the redis server:
-redis.lpush "suj_pusher_msgs", msg_json
+redis.lpush "pusher:suj_pusher_msgs", msg_json
 
 # Notify workers there is a new message
-redis.publish "suj_pusher_queue", "PUSH_MSG"
+redis.publish "pusher:suj_pusher_queue", "PUSH_MSG"
 ```
 
-You must push the messages to the *suj_pusher_queue* queue that is the one the Pusher daemon is listening to. Also make sure your message follows the format described on the previous sections.
+First you must push your messages to the *suj_pusher_msgs* queue and then publish a *PUSH_MSG* to the *suj_pusher_queue*. The first is a simple queue that stores the messages and the second is a PUB/SUB queue that tells the push daemons that a new message is available. Also make sure to set the same namespace (e.g. pusher) to the queue names that you set on the pusher daemons.
 
 ## Issues
 
 - We have no feedback mechanism. This is a fire and forget daemon that does not tell us if the message was sent or not.
 - This daemon has no security at all. Anyone that can push to your redis server can use this daemon to spam your users. Make sure your redis server is only accessible to you and the pusher daemon.
+
+## Troubleshooting
+
+- You get errors like "Encryption not available on this event-machine", ensure that the eventmachine gem was installed with ssl support. If you are not sure uninstall the gem, install libssl-dev package and re-install the gem again.
+- If you get 401 Unauthorized error on the log when sending notifications via GCM, ensure the key you use has configured the global IP addresses of the pusher daemons as allowed.
 
 ## TODO
 

@@ -37,7 +37,7 @@ ARGV.options do |opts|
   opts.on('-l LOGS', '--logdir LOGS', String, 'Logs destination directory') { |l| logdir = l }
   opts.on('-p PIDS', '--piddir PIDS', String, 'Pids destination diercoty') { |pid| piddir = pid }
   opts.on('-c CERTS', '--cerdir CERTS', String, 'Directory to store certificates') { |cert| cerdir = cert }
-  opts.on('-v', '--version', 'Print this version of pusher daemon.') { puts "rapns #{Suj::Pusher::VERSION}"; exit }
+  opts.on('-v', '--version', 'Print this version of pusher daemon.') { puts "Pusher #{Suj::Pusher::VERSION}"; exit }
   opts.on('-h', '--help', 'You\'re looking at it.') { puts opts; exit }
   opts.parse!
 end
