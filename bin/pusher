@@ -30,7 +30,7 @@ cerdir = File.join(WORKDIR, "certs")
 
 ARGV.options do |opts|
   opts.banner = BANNER
-  opts.on('-h REDIS HOST', '--host REDIS HOST', String, 'Redis server to connect') { |host| redis_host = host }
+  opts.on('-H REDIS HOST', '--host REDIS HOST', String, 'Redis server to connect') { |host| redis_host = host }
   opts.on('-P REDIS PORT', '--port REDIS PORT', String, 'Redis server port') { |port| redis_port = port }
   opts.on('-b REDIS DB', '--db REDIS DB', String, 'Redis database number') { |db| redis_db = db }
   opts.on('-n REDIS NAMESPACE', '--namespace REDIS NAMESPACE', String, 'Redis server namespace') { |name| redis_namespace = name }
