@@ -133,8 +133,11 @@ msg_json = MultiJson.dump(msg)
 # Obtain a redis instance
 redis = Redis.new({ host: "localhost", port: 6379})
 
-# Push the message to the *suj_pusher_queue* in the redis server.
-redis.publish "suj_pusher_queue", msg_json
+# Push the message to the *suj_pusher_queue* in the redis server:
+redis.lpush "suj_pusher_msgs", msg_json
+
+# Notify workers there is a new message
+redis.publish "suj_pusher_queue", "PUSH_MSG"
 ```
 
 You must push the messages to the *suj_pusher_queue* queue that is the one the Pusher daemon is listening to. Also make sure your message follows the format described on the previous sections.
