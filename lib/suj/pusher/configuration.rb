@@ -13,7 +13,10 @@ module Suj
       :certs_path,
       :workdir,
       :logger,
-      :redis
+      :redis_host,
+      :redis_port,
+      :redis_db,
+      :redis_namespace
     ]
 
     class Configuration < Struct.new(*CONFIG_ATTRS)
@@ -31,7 +34,10 @@ module Suj
       end
 
       def set_defaults
-        self.redis = "redis://localhost:6379"
+        self.redis_host = "localhost"
+        self.redis_port = 6379
+        self.redis_db = 0
+        self.redis_namespace = "pusher"
         self.logger = ::Logger.new(STDOUT)
       end
 
