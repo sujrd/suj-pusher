@@ -11,21 +11,6 @@ WORKDIR = Dir.pwd
 
 class PusherDaemon < DaemonSpawn::Base
   def start(args)
-    config = Suj::Pusher::Configuration.new
-    args.options do |opts|
-      opts.banner = BANNER
-      opts.on('-r REDIS', '--redis REDIS', String, 'Redis server to connect') { |redis| config.redis = redis }
-      opts.on('-v', '--version', 'Print this version of rapns.') { puts "rapns #{Suj::Pusher::VERSION}"; exit }
-      opts.on('-h', '--help', 'You\'re looking at it.') { puts opts; exit }
-      opts.parse!
-    end
-
-    config.certs_path = File.join(WORKDIR, "certs")
-    FileUtils.mkdir_p(config.certs_path)
-    FileUtils.mkdir_p(File.join(WORKDIR, "logs"))
-    FileUtils.mkdir_p(File.join(WORKDIR, "tmp/pids"))
-    Suj::Pusher.config.update(config)
-
     @daemon = Suj::Pusher::Daemon.new
     @daemon.start
   end
@@ -35,7 +20,34 @@ class PusherDaemon < DaemonSpawn::Base
   end
 end
 
+redis = "redis://localhost:6379/pusher"
+logdir = File.join(WORKDIR, "logs")
+piddir = File.join(WORKDIR, "pids")
+cerdir = File.join(WORKDIR, "certs")
+
+ARGV.options do |opts|
+  opts.banner = BANNER
+  opts.on('-r REDIS', '--redis REDIS', String, 'Redis server to connect') { |r|redis = r }
+  opts.on('-l LOGS', '--logdir LOGS', String, 'Logs destination directory') { |l| logdir = l }
+  opts.on('-p PIDS', '--piddir PIDS', String, 'Pids destination diercoty') { |pid| piddir = pid }
+  opts.on('-c CERTS', '--cerdir CERTS', String, 'Directory to store certificates') { |cert| cerdir = cert }
+  opts.on('-v', '--version', 'Print this version of pusher daemon.') { puts "rapns #{Suj::Pusher::VERSION}"; exit }
+  opts.on('-h', '--help', 'You\'re looking at it.') { puts opts; exit }
+  opts.parse!
+end
+
+FileUtils.mkdir_p(cerdir)
+FileUtils.mkdir_p(logdir)
+FileUtils.mkdir_p(piddir)
+
+config = Suj::Pusher::Configuration.new
+config.certs_path = cerdir
+config.redis = redis
+Suj::Pusher.config.update(config)
+
 PusherDaemon.spawn!(
   sync_log: true,
-  working_dir: Dir.pwd
+  working_dir: Dir.pwd,
+  log_file: File.join(logdir, "pusher-worker.log"),
+  pid_file: File.join(piddir, "pusher-worker.pid")
 )
