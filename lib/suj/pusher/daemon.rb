@@ -15,6 +15,7 @@ module Suj
 
       def start
         info "Starting pusher daemon"
+        info " subsribe to push messages from #{Suj::Pusher.config.redis}"
         EM.run do
           wait_msg do |msg|
             begin
