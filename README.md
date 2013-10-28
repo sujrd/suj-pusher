@@ -119,6 +119,39 @@ Normally you would send messages to either Android or iOS indenpendently. But th
 
 If your data hash is compatible with the APN standard as described above and you specify a APN cert, a GCM api_key, a list of apn_ids and a list of gcm_ids then the message will be delivered via push notification to all the devices in those lists. Apple will display the notifications using their own mechanisms and for Android you will receive the data hash in a Bundle object as usual. Is your responsibility to extract the data from that bundle and display/use it as you please.
 
+
+
+#### Sending one message to WNS
+message hash: { 
+		wnstype: "type" ,
+		 wnsrequeststatus: true,
+		 wnsids: ["xxx"],
+		 secret: "app-secret",
+		 development: false,
+		 sid: "secret-id",
+		  data: "notif"}
+wnstype: type of the notification to send, posibles values are: "wns/badge", "wns/tile", "wns/toast", "wns/raw"
+data: a string with de notifiaction to send, please use the xml templates provided by Microsoft(http://msdn.microsoft.com/en-us/library/windows/apps/hh779725.aspx) for each wnstype listed above. 
+secret and sid: App identification credentials provided by microsoft when registering a new application to use wns services.
+wnsrequeststatus: boolean, if true, the response from wns server will have aditional information
+wnsids: jsonArray of target devices.
+
+
+#### Sending one message to WPNS
+message hash: {  wptype: "type",
+	  	 wpids: ["xxx"],
+		 secret: "unicId",
+		 development: false,
+		 wpnotificationclass: number,
+		 data: notif}
+
+wptype: ype of the notification to send, posible values are: "toast" or  "badge", if this parameter is not present, a "raw" type notifications will be sent.
+secret: a unic hash to identify a conection, internal use, each notification sent must have a diferent id
+wpids: jsonArray of ids for target devices  
+data: notification data to send, please use de xsml template provided by Microsoft(http://msdn.microsoft.com/en-us/library/windowsphone/develop/hh202945(v=vs.105).aspx) for each wptype listed above
+
+
+
 ## Examples
 
 A simple example using ruby code to send a push notification to iOS devices.
@@ -168,3 +201,4 @@ First you must push your messages to the *suj_pusher_msgs* queue and then publis
 
 - Implement a feedback mechanism that exposes a simple API to allow users check if some tokens, ids, certs, or api_keys are no longer valid so they can take proper action.
 - Find a way to register certificates and api_key only once so we do not need to send them for every request. Maybe add a cert/key registration api.
+- For MPNS add ssl service authentification for unlimited push notifications.

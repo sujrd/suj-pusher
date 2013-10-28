@@ -81,6 +81,12 @@ module Suj
           end
         elsif msg.has_key?(:api_key)
           send_gcm_notification(msg)
+        elsif msg.has_key?(:secret) && msg.has_key?(:sid)
+          #wns push notification
+          send_wns_notification(msg)
+        elsif  msg.has_key?(:wpnotificationclass)
+          #send wpns push notification
+          send_wpns_notification(msg)
         else
           warn "Could not determine push notification service."
         end
@@ -131,6 +137,20 @@ module Suj
         conn = pool.gcm_connection(msg)
         conn.deliver(msg)
       end
+
+      def send_wns_notification(msg)
+        info "Sending WNS notification via connection #{Digest::SHA1.hexdigest(msg[:secret])}"
+        conn = pool.wns_connection(msg)
+        conn.deliver(msg)
+      end
+
+      def send_wpns_notification(msg)
+        info "Sending WPNS notification via connection #{Digest::SHA1.hexdigest(msg[:secret])}"
+        conn = pool.wpns_connection(msg)
+        conn.deliver(msg)
+      end
+
+
 
       def redis_url
         @redis_url ||= "redis://#{Suj::Pusher.config.redis_host}:#{Suj::Pusher.config.redis_port}/#{Suj::Pusher.config.redis_db}"
