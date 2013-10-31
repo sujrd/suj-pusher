@@ -5,7 +5,7 @@ require "suj/pusher/version"
 Gem::Specification.new do |s|
   s.name        = "suj-pusher"
   s.version     = Suj::Pusher::VERSION
-  s.authors     = ["Horacio Sanson / Nicolas Bersano(WNS and MPNS support)"]
+  s.authors     = ["Horacio Sanson / Fernando Wong / Nicolas Bersano(WNS and MPNS support)"]
   s.email       = ["rd@skillupjapan.co.jp, n.bersano@skillupchile.cl"]
   s.homepage    = "https://github.com/sujrd/suj-pusher"
   s.summary     = %q{Stand alone push notification server.}
