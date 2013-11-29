@@ -1,4 +1,5 @@
 require "base64"
+require "thread"
 require File.join File.dirname(File.expand_path(__FILE__)), "apn_connection.rb"
 require File.join File.dirname(File.expand_path(__FILE__)), "gcm_connection.rb"
 
@@ -17,18 +18,23 @@ module Suj
       def initialize(daemon)
         @pool = {}
         @daemon = daemon
+        @mutex = Mutex.new
       end
 
       def apn_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:cert]
         info "APN connection #{cert}"
-        @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
+        @mutex.synchronize do
+          @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
+        end
       end
 
       def apn_sandbox_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:cert]
         info "APN connection #{cert}"
-        @pool[cert] ||= EM.connect(APN_SANDBOX, APN_PORT, APNConnection, self, options)
+        @mutex.synchronize do
+          @pool[cert] ||= EM.connect(APN_SANDBOX, APN_PORT, APNConnection, self, options)
+        end
       end
 
       def feedback_connection(options = {})
@@ -45,32 +51,36 @@ module Suj
         # All GCM connections are unique, even if they are to the same app.
         api_key = "#{options[:api_key]}#{rand * 100}"
         info "GCM connection #{api_key}"
-        @pool[api_key] ||= Suj::Pusher::GCMConnection.new(self, api_key, options)
+        @mutex.synchronize do
+          @pool[api_key] ||= Suj::Pusher::GCMConnection.new(self, api_key, options)
+        end
       end
 
       def apn_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:cert]
         info "APN connection #{cert}"
-        @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
+        @mutex.synchronize do
+          @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
+        end
       end
 
       def wns_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:secret]
         info "WNS connection #{cert}"
         info "WNS Options #{options}"
-        @pool[cert] ||= Suj::Pusher::WNSConnection.new(self,options)
+        @mutex.synchronize do
+          @pool[cert] ||= Suj::Pusher::WNSConnection.new(self,options)
+        end
       end
 
       def wpns_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:secret]
         info "WPNS connection #{cert}"
         info "WPNS Options #{options}"
-        @pool[cert] ||= Suj::Pusher::WPNSConnection.new(self,options)
-        return @pool[cert]
+        @mutex.synchronize do
+          @pool[cert] ||= Suj::Pusher::WPNSConnection.new(self,options)
+        end
       end
-
-
-
 
       def remove_connection(key)
         info "Removing connection #{key}"
