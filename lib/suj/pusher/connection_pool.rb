@@ -48,6 +48,30 @@ module Suj
         @pool[api_key] ||= Suj::Pusher::GCMConnection.new(self, api_key, options)
       end
 
+      def apn_connection(options = {})
+        cert = Digest::SHA1.hexdigest options[:cert]
+        info "APN connection #{cert}"
+        @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
+      end
+
+      def wns_connection(options = {})
+        cert = Digest::SHA1.hexdigest options[:secret]
+        info "WNS connection #{cert}"
+        info "WNS Options #{options}"
+        @pool[cert] ||= Suj::Pusher::WNSConnection.new(self,options)
+      end
+
+      def wpns_connection(options = {})
+        cert = Digest::SHA1.hexdigest options[:secret]
+        info "WPNS connection #{cert}"
+        info "WPNS Options #{options}"
+        @pool[cert] ||= Suj::Pusher::WPNSConnection.new(self,options)
+        return @pool[cert]
+      end
+
+
+
+
       def remove_connection(key)
         info "Removing connection #{key}"
         info "Connection not found" unless @pool.delete(key)
