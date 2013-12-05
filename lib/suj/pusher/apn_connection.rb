@@ -16,6 +16,7 @@ module Suj
         6 => "Invalid topic size",
         7 => "Invalid payload size",
         8 => "Invalid token",
+        10 => "Shutdown",
         255 => "Unknown error"
       }
 
@@ -42,18 +43,21 @@ module Suj
 
       def deliver(data)
         begin
-          @notification = Suj::Pusher::ApnNotification.new(data)
+          @notifications = []
+          data[:apn_ids].each do |apn_id|
+            @notifications << Suj::Pusher::ApnNotification.new(data.merge({token: apn_id}))
+          end
           if ! disconnected?
             info "APN delivering data"
-            send_data(@notification.data)
-            @notification = nil
+            send_data(@notifications.join)
+            @notifications = nil
             info "APN delivered data"
           else
             info "APN connection unavailable"
           end
         rescue Suj::Pusher::ApnNotification::PayloadTooLarge => e
           error "APN notification payload too large."
-          debug @notification.data.inspect
+          debug @notifications.join.inspect
         rescue => ex
           error "APN notification error : #{ex}"
         end
@@ -76,10 +80,10 @@ module Suj
       def connection_completed
         info "APN Connection established..."
         @disconnected = false
-        if ! @notification.nil?
+        if ! @notifications.nil?
           info "EST - APN delivering data"
-          send_data(@notification.data)
-          @notification = nil
+          send_data(@notifications.join)
+          @notifications = nil
           info "EST - APN delivered data"
         end
       end

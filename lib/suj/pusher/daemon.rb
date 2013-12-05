@@ -89,17 +89,19 @@ module Suj
       def send_apn_notification(msg)
         info "Sending APN notification via connection #{Digest::SHA1.hexdigest(msg[:cert])}"
         conn = pool.apn_connection(msg)
-        msg[:apn_ids].each do |apn_id|
-          conn.deliver(msg.merge({token: apn_id}))
-        end
+        conn.deliver(msg)
+        # msg[:apn_ids].each do |apn_id|
+        #   conn.deliver(msg.merge({token: apn_id}))
+        # end
       end
 
       def send_apn_sandbox_notification(msg)
         info "Sending APN sandbox notification via connection #{Digest::SHA1.hexdigest(msg[:cert])}"
         conn = pool.apn_sandbox_connection(msg)
-        msg[:apn_ids].each do |apn_id|
-          conn.deliver(msg.merge({token: apn_id}))
-        end
+        conn.deliver(msg)
+        # msg[:apn_ids].each do |apn_id|
+        #   conn.deliver(msg.merge({token: apn_id}))
+        # end
       end
 
       def feedback_connection(msg)
