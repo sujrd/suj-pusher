@@ -17,21 +17,7 @@ module Suj
         info "Starting pusher daemon"
         info " subsribe to push messages from #{redis_url} namespace #{redis_namespace}"
         EM.run do
-          wait_msg do |msg|
-            begin
-              info "RECEIVED MESSAGE"
-              data = Hash.symbolize_keys(MultiJson.load(msg))
-              send_notification(data)
-              info "SENT MESSAGE"
-              retrieve_feedback(data)
-              info "FINISHED FEEDBACK RETRIEVAL"
-            rescue MultiJson::LoadError
-              warn("Received invalid json data, discarding msg")
-            rescue => e
-              error("Error sending notification : #{e}")
-              error e.backtrace
-            end
-          end
+          wait_msg
         end
       end
 
@@ -47,28 +33,26 @@ module Suj
       private
 
       def wait_msg
-        redis.on(:connected) { info "REDIS - Connected to Redis server #{redis_url}" }
-        redis.on(:closed) { info "REDIS - Closed connection to Redis server" }
-        redis.on(:failed) { info "REDIS - redis connection FAILED" }
-        redis.on(:reconnected) { info "REDIS - Reconnected to Redis server" }
-        redis.on(:disconnected) { info "REDIS - Disconnected from Redis server" }
-        redis.on(:reconnect_failed) { info "REDIS - Reconnection attempt to Redis server FAILED" }
-        # EM.add_periodic_timer(30) { redis.publish Suj::Pusher::QUEUE, "ECHO" }
-        redis.pubsub.subscribe("#{redis_namespace}:#{Suj::Pusher::QUEUE}") do |msg|
-          if msg == "ECHO"
-            info "REDIS - ECHO Received"
-          elsif msg == "PUSH_MSG"
-            info "REDIS - PUSH_MSG Received"
-            get_message.callback do |message|
-              if message
-                yield message
-              else
-                info "REDIS - PUSH_MSG Queue was empty"
-              end
-            end
-          else
-            yield msg
+        defer = redis.brpop "#{redis_namespace}:#{MSG_QUEUE}", 0
+        defer.callback do |_, msg|
+          begin
+            info "RECEIVED MESSAGE"
+            data = Hash.symbolize_keys(MultiJson.load(msg))
+            send_notification(data)
+            info "SENT MESSAGE"
+            retrieve_feedback(data)
+            info "FINISHED FEEDBACK RETRIEVAL"
+          rescue MultiJson::LoadError
+            warn("Received invalid json data, discarding msg")
+          rescue => e
+            error("Error sending notification : #{e}")
+            error e.backtrace
           end
+          EM.next_tick { wait_msg }
+        end
+        defer.errback do |e|
+          error e
+          EM.next_tick { wait_msg }
         end
       end
 
@@ -161,13 +145,40 @@ module Suj
       end
 
       def redis
-        @redis ||= EM::Hiredis.connect(redis_url)
+        return @redis if ! @redis.nil?
+
+        @redis = EM::Hiredis.connect(redis_url)
+
+        @redis.on(:connected) { info "REDIS - Connected to Redis server #{redis_url}" }
+
+        @redis.on(:closed) do
+          info "REDIS - Closed connection to Redis server"
+          @redis = nil
+        end
+
+        @redis.on(:failed) do
+          info "REDIS - redis connection FAILED"
+          @redis = nil
+        end
+
+        @redis.on(:reconnected) { info "REDIS - Reconnected to Redis server" }
+
+        @redis.on(:disconnected) do
+          info "REDIS - Disconnected from Redis server"
+          @redis = nil
+        end
+
+        @redis.on(:reconnect_failed) do
+          info "REDIS - Reconnection attempt to Redis server FAILED"
+          @redis = nil
+        end
+
+        return @redis
       end
 
-      def get_message
-        @redis_connection ||= EM::Hiredis.connect(redis_url)
-        @redis_connection.rpop "#{redis_namespace}:#{MSG_QUEUE}"
-      end
+      # def get_message
+      #   @redis_connection ||= EM::Hiredis.connect(redis_url)
+      # end
 
       def pool
         @pool ||= Suj::Pusher::ConnectionPool.new(self)

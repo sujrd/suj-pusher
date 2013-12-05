@@ -113,15 +113,8 @@ When sending push notifications to iOS devices you must provide an aps hash insi
 
 Read the [official documentation](http://developer.apple.com/library/ios/#documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html#//apple_ref/doc/uid/TP40008194-CH100-SW1) for details on the *aps* hash format. Note that this hash must not exceed the 256 bytes or it will be rejected by the APN service.
 
-#### Sending one message to both APN and GCM
-
-Normally you would send messages to either Android or iOS indenpendently. But the pusher daemon can send the same message to devices on both networks as long as you follow the Apple restrictions. This is because Apple push messages are more limited than GCM.
-
-If your data hash is compatible with the APN standard as described above and you specify a APN cert, a GCM api_key, a list of apn_ids and a list of gcm_ids then the message will be delivered via push notification to all the devices in those lists. Apple will display the notifications using their own mechanisms and for Android you will receive the data hash in a Bundle object as usual. Is your responsibility to extract the data from that bundle and display/use it as you please.
-
-
-
 #### Sending one message to WNS
+
 message hash: { 
 		wnstype: "type" ,
 		 wnsrequeststatus: true,
@@ -136,7 +129,6 @@ secret and sid: App identification credentials provided by microsoft when regist
 wnsrequeststatus: boolean, if true, the response from wns server will have aditional information
 wnsids: jsonArray of target devices.
 
-
 #### Sending one message to WPNS
 message hash: {  wptype: "type",
 	  	 wpids: ["xxx"],
@@ -149,8 +141,6 @@ wptype: ype of the notification to send, posible values are: "toast" or  "badge"
 secret: a unic hash to identify a conection, internal use, each notification sent must have a diferent id
 wpids: jsonArray of ids for target devices  
 data: notification data to send, please use de xsml template provided by Microsoft(http://msdn.microsoft.com/en-us/library/windowsphone/develop/hh202945(v=vs.105).aspx) for each wptype listed above
-
-
 
 ## Examples
 
@@ -181,11 +171,9 @@ redis = Redis.new({ host: "localhost", port: 6379})
 # Push the message to the *suj_pusher_queue* in the redis server:
 redis.lpush "pusher:suj_pusher_msgs", msg_json
 
-# Notify workers there is a new message
-redis.publish "pusher:suj_pusher_queue", "PUSH_MSG"
 ```
 
-First you must push your messages to the *suj_pusher_msgs* queue and then publish a *PUSH_MSG* to the *suj_pusher_queue*. The first is a simple queue that stores the messages and the second is a PUB/SUB queue that tells the push daemons that a new message is available. Also make sure to set the same namespace (e.g. pusher) to the queue names that you set on the pusher daemons.
+Once you push the JSON message to the *suj_pusher_msgs* queue the pusher workers will retrieve and process it.
 
 ## Issues
 

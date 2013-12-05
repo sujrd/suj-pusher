@@ -57,6 +57,7 @@ Suj::Pusher.config.update(config)
 PusherDaemon.spawn!(
   sync_log: true,
   working_dir: Dir.pwd,
+  processes: 1,
   log_file: File.join(logdir, "pusher-worker.log"),
   pid_file: File.join(piddir, "pusher-worker.pid")
 )
