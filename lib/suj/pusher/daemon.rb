@@ -134,8 +134,6 @@ module Suj
         conn.deliver(msg)
       end
 
-
-
       def redis_url
         @redis_url ||= "redis://#{Suj::Pusher.config.redis_host}:#{Suj::Pusher.config.redis_port}/#{Suj::Pusher.config.redis_db}"
       end
