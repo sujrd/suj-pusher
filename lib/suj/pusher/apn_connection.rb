@@ -1,4 +1,5 @@
 require "eventmachine"
+require "iobuffer"
 
 require "base64"
 module Suj
@@ -27,6 +28,7 @@ module Suj
         @options = options
         @cert_key = Digest::SHA1.hexdigest(@options[:cert])
         @cert_file = File.join(Suj::Pusher.config.certs_path, @cert_key)
+        @buffer = IO::Buffer.new
         File.open(@cert_file, "w") do |f|
           f.write @options[:cert]
         end
@@ -50,6 +52,7 @@ module Suj
           if ! disconnected?
             info "APN delivering data"
             send_data(@notifications.join)
+            info "APN push notification sent"
             @notifications = nil
             info "APN delivered data"
           else
@@ -68,12 +71,23 @@ module Suj
         start_tls(@ssl_options)
       end
 
+      # Receives error data from APN servers. Each error is 6 bytes long
+      # and contains:
+      #
+      #   cmd    -> 1 byte unsigned integer that is always 8
+      #   status -> 1 byte unsigned integer that indicates the error
+      #             See ERRORS array for a list
+      #   id     -> 4 byte message ID set when the message was sent
       def receive_data(data)
-        cmd, status, id = data.unpack("ccN")
-        if status != 0
-          error "APN push error received: #{ERRORS[status]}"
-        else
-          info "APN push notification sent"
+        @buffer << data
+        while @buffer.size >= 6
+          res = @buffer.read(6)
+          cmd, status, id = data.unpack("CCN")
+          if cmd != 8
+            error "APN push response command differs from 8"
+          elsif status != 0
+            error "APN push error received: #{ERRORS[status]} for id #{id}"
+          end
         end
       end
 
@@ -83,6 +97,7 @@ module Suj
         if ! @notifications.nil?
           info "EST - APN delivering data"
           send_data(@notifications.join)
+          info "APN push notification sent"
           @notifications = nil
           info "EST - APN delivered data"
         end
