@@ -16,6 +16,8 @@ module Suj
       def start
         info "Starting pusher daemon"
         info " subsribe to push messages from #{redis_url} namespace #{redis_namespace}"
+        @last_feedback = Time.now
+        @last_sandbox_feedback = Time.now
         EM.run do
           wait_msg
         end
@@ -41,7 +43,6 @@ module Suj
             send_notification(data)
             info "SENT MESSAGE"
             retrieve_feedback(data)
-            info "FINISHED FEEDBACK RETRIEVAL"
           rescue MultiJson::LoadError
             warn("Received invalid json data, discarding msg")
           rescue => e
@@ -105,14 +106,14 @@ module Suj
       end
 
       def feedback_connection(msg)
-        return if @last_feedback and (Time.now - @last_feedback < FEEDBACK_TIME)
+        return Time.now - @last_feedback < FEEDBACK_TIME
         info "Get feedback information"
         conn = pool.feedback_connection(msg)
         @last_feedback = Time.now
       end
 
       def feedback_sandbox_connection(msg)
-        #return if @last_sandbox_feedback and (Time.now - @last_sandbox_feedback < FEEDBACK_TIME)
+        return if Time.now - @last_sandbox_feedback < FEEDBACK_TIME
         info "Get feedback sandbox information"
         conn = pool.feedback_sandbox_connection(msg)
         @last_sandbox_feedback = Time.now
