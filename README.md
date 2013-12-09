@@ -4,12 +4,11 @@ This is a simple but enterprise level pusher server that can push notifications 
 
 ## Features
 
-- Support both APN and GCM push services with a simple unified API interface.
+- EventMachine based for efficient use of resources.
+- Support both APN, GCM, WNS, and WPNS push services with a simple unified json API interface.
 - Keep persistent connections to APN following Apple's recommendations.
 - Uses the APN protocol version 2 for batched notifications.
-- Use redis pub/sub mechanism for real time push notifications. No polling.
 - No need to set APN certificates or GCM api keys in configuration files or pusher startup. These are sent in a per request basis. This allows support for multiple APN certs and GCM api keys in a single Pusher instance.
-- EventMachine based to handle in the order of thousands of push requests per second.
 
 ## Installation
 
