@@ -112,7 +112,7 @@ module Suj
       end
 
       def feedback_sandbox_connection(msg)
-        return if @last_sandbox_feedback and (Time.now - @last_sandbox_feedback < FEEDBACK_TIME)
+        #return if @last_sandbox_feedback and (Time.now - @last_sandbox_feedback < FEEDBACK_TIME)
         info "Get feedback sandbox information"
         conn = pool.feedback_sandbox_connection(msg)
         @last_sandbox_feedback = Time.now

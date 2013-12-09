@@ -106,7 +106,6 @@ module Suj
       def unbind
         info "APN Connection closed..."
         @disconnected = true
-        FileUtils.rm_f(@cert_file)
         @pool.remove_connection(@cert_key)
       end
     end

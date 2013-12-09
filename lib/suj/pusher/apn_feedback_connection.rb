@@ -1,4 +1,5 @@
 require "eventmachine"
+require "iobuffer"
 
 require "base64"
 module Suj
@@ -6,12 +7,15 @@ module Suj
     class APNFeedbackConnection < EM::Connection
       include Suj::Pusher::Logger
 
-      def initialize(options = {})
+      def initialize(pool, options = {})
         super
         @disconnected = true
         @options = options
-        @cert_key = Digest::SHA1.hexdigest(@options[:cert])
+        @pool = pool
+        @cert_key = Digest::SHA1.hexdigest("FEEDBACK" + @options[:cert])
         @cert_file = File.join(Suj::Pusher.config.certs_path, @cert_key)
+        @buffer = IO::Buffer.new
+        self.comm_inactivity_timeout = 10          # Close after 10 sec of inactivity
         File.open(@cert_file, "w") do |f|
           f.write @options[:cert]
         end
@@ -31,9 +35,21 @@ module Suj
         start_tls(@ssl_options)
       end
 
+      # Receive feedback data from APN servers.
+      #
+      # The format is:
+      #
+      #   timestamp -> 4 byte bigendian
+      #   len       -> 2 byte token length
+      #   token     -> 32 bytes token
       def receive_data(data)
-        timestamp, size, token = data.unpack("QnN")
-        info "APN Feedback invalid token #{token}"
+        @buffer << data
+
+        while @buffer.size >= 38
+          timestamp, size = @buffer.read(6).unpack("Nn")
+          token = @buffer.read(size)
+          puts " FEEDBACK TIMESTAMP: #{timestamp}  SIZE: #{size} TOKEN: #{token}"
+        end
       end
 
       def connection_completed
@@ -44,6 +60,7 @@ module Suj
       def unbind
         info "APN Feedback Connection closed..."
         @disconnected = true
+        @pool.remove_connection(@cert_key)
       end
     end
   end

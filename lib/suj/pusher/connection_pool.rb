@@ -38,13 +38,20 @@ module Suj
       end
 
       def feedback_connection(options = {})
-        info "Feedback connection"
-        EM.connect(FEEDBACK_GATEWAY, FEEDBACK_PORT, APNFeedbackConnection, options)
+        cert = Digest::SHA1.hexdigest("FEEDBACK" + options[:cert])
+        info "APN Feedback connection #{cert}"
+        @mutex.synchronize do
+          @pool[cert] ||= EM.connect(FEEDBACK_GATEWAY, FEEDBACK_PORT, APNFeedbackConnection, self, options)
+        end
       end
 
       def feedback_sandbox_connection(options = {})
-        info "Feedback sandbox connection"
-        EM.connect(FEEDBACK_SANDBOX, FEEDBACK_PORT, APNFeedbackConnection, options)
+        info "Feedback connection"
+        cert = Digest::SHA1.hexdigest("FEEDBACK" + options[:cert])
+        info "APN Sandbox Feedback connection #{cert}"
+        @mutex.synchronize do
+          @pool[cert] ||= EM.connect(FEEDBACK_SANDBOX, FEEDBACK_PORT, APNFeedbackConnection, self, options)
+        end
       end
 
       def gcm_connection(options = {})
