@@ -40,11 +40,15 @@ module Suj
           begin
             info "RECEIVED MESSAGE"
             data = Hash.symbolize_keys(MultiJson.load(msg))
-            send_notification(data)
+            info "GET CONNECTION"
+            conn = pool.get_connection(data)
+            conn.deliver(data)
             info "SENT MESSAGE"
             retrieve_feedback(data)
           rescue MultiJson::LoadError
             warn("Received invalid json data, discarding msg")
+          rescue ConnectionPool::UnknownConnection
+            warn("Could not determine connetion type for message")
           rescue => e
             error("Error sending notification : #{e}")
             error e.backtrace
@@ -57,26 +61,6 @@ module Suj
         end
       end
 
-      def send_notification(msg)
-        if msg.has_key?(:cert)
-          if msg.has_key?(:development) && msg[:development]
-            send_apn_sandbox_notification(msg)
-          else
-            send_apn_notification(msg)
-          end
-        elsif msg.has_key?(:api_key)
-          send_gcm_notification(msg)
-        elsif msg.has_key?(:secret) && msg.has_key?(:sid)
-          #wns push notification
-          send_wns_notification(msg)
-        elsif  msg.has_key?(:wpnotificationclass)
-          #send wpns push notification
-          send_wpns_notification(msg)
-        else
-          warn "Could not determine push notification service."
-        end
-      end
-
       def retrieve_feedback(msg)
         if msg.has_key?(:cert)
           if msg.has_key?(:development) && msg[:development]
@@ -85,24 +69,6 @@ module Suj
             feedback_connection(msg)
           end
         end
-      end
-
-      def send_apn_notification(msg)
-        info "Sending APN notification via connection #{Digest::SHA1.hexdigest(msg[:cert])}"
-        conn = pool.apn_connection(msg)
-        conn.deliver(msg)
-        # msg[:apn_ids].each do |apn_id|
-        #   conn.deliver(msg.merge({token: apn_id}))
-        # end
-      end
-
-      def send_apn_sandbox_notification(msg)
-        info "Sending APN sandbox notification via connection #{Digest::SHA1.hexdigest(msg[:cert])}"
-        conn = pool.apn_sandbox_connection(msg)
-        conn.deliver(msg)
-        # msg[:apn_ids].each do |apn_id|
-        #   conn.deliver(msg.merge({token: apn_id}))
-        # end
       end
 
       def feedback_connection(msg)
@@ -117,24 +83,6 @@ module Suj
         info "Get feedback sandbox information"
         conn = pool.feedback_sandbox_connection(msg)
         @last_sandbox_feedback = Time.now
-      end
-
-      def send_gcm_notification(msg)
-        info "Sending GCM notification via connection #{msg[:api_key]}"
-        conn = pool.gcm_connection(msg)
-        conn.deliver(msg)
-      end
-
-      def send_wns_notification(msg)
-        info "Sending WNS notification via connection #{Digest::SHA1.hexdigest(msg[:secret])}"
-        conn = pool.wns_connection(msg)
-        conn.deliver(msg)
-      end
-
-      def send_wpns_notification(msg)
-        info "Sending WPNS notification via connection #{Digest::SHA1.hexdigest(msg[:secret])}"
-        conn = pool.wpns_connection(msg)
-        conn.deliver(msg)
       end
 
       def redis_url
