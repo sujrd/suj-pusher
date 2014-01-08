@@ -177,7 +177,6 @@ Once you push the JSON message to the *suj_pusher_msgs* queue the pusher workers
 
 ## Issues
 
-- We have no feedback mechanism. This is a fire and forget daemon that does not tell us if the message was sent or not.
 - This daemon has no security at all. Anyone that can push to your redis server can use this daemon to spam your users. Make sure your redis server is only accessible to you and the pusher daemon.
 
 ## Troubleshooting
@@ -185,8 +184,3 @@ Once you push the JSON message to the *suj_pusher_msgs* queue the pusher workers
 - You get errors like "Encryption not available on this event-machine", ensure that the eventmachine gem was installed with ssl support. If you are not sure uninstall the gem, install libssl-dev package and re-install the gem again.
 - If you get 401 Unauthorized error on the log when sending notifications via GCM, ensure the key you use has configured the global IP addresses of the pusher daemons as allowed.
 
-## TODO
-
-- Implement a feedback mechanism that exposes a simple API to allow users check if some tokens, ids, certs, or api_keys are no longer valid so they can take proper action.
-- Find a way to register certificates and api_key only once so we do not need to send them for every request. Maybe add a cert/key registration api.
-- For MPNS add ssl service authentification for unlimited push notifications.
