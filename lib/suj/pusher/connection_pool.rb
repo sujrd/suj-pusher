@@ -92,6 +92,23 @@ module Suj
         end
       end
 
+      def close
+        @mutex.synchronize {
+          @pool.each do |k, conn|
+            conn.close_connection_after_writing
+          end
+        }
+        @feedback_mutex.synchronize {
+          @feedback_pool.each do |k, conn|
+            conn.close_connection
+          end
+        }
+      end
+
+      def pending_connections?
+        @pool.size + @feedback_pool.size > 0
+      end
+
       private
 
       def apn_connection(options = {})

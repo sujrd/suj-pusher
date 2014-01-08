@@ -31,12 +31,21 @@ module Suj
       end
 
       def stop
-        info "Stopping daemon process"
-        begin
+        pool.close
+        redis.close
+
+        if ! pool.pending_connections?
           EM.stop
-        rescue
+          info "Stopped daemon process"
+        else
+          info "Waiting for pending connections"
+          EM.add_periodic_timer(5) {
+            if ! pool.pending_connections?
+              EM.stop
+              info "Stopped daemon process"
+            end
+          }
         end
-        info "Stopped daemon process"
       end
 
       private
@@ -60,23 +69,28 @@ module Suj
 
       def get_msg
         f = Fiber.current
-        defer = redis.brpop msg_queue, 0
-        defer.callback do |_, msg|
-          info "Received message"
-          begin
-            data = Hash.symbolize_keys(MultiJson.load(msg))
-            f.resume(data)
-          rescue MultiJson::LoadError
-            warn("Message has bad json format, discarding")
-            f.resume(nil)
-          rescue => e
-            error(e)
+        begin
+          defer = redis.brpop msg_queue, 0
+          defer.callback do |_, msg|
+            info "Received message"
+            begin
+              data = Hash.symbolize_keys(MultiJson.load(msg))
+              f.resume(data)
+            rescue MultiJson::LoadError
+              warn("Message has bad json format, discarding")
+              f.resume(nil)
+            rescue => e
+              error(e)
+              f.resume(nil)
+            end
+          end
+          defer.errback do |e|
             f.resume(nil)
           end
-        end
-        defer.errback do |e|
-          error e
-          f.resume(nil)
+        rescue EventMachine::Hiredis::Error => e
+          info e
+        rescue => ex
+          error ex
         end
         return Fiber.yield
       end
