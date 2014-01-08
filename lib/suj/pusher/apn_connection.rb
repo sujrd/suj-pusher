@@ -33,6 +33,7 @@ module Suj
         @cert_key = Digest::SHA1.hexdigest(@options[:cert])
         @cert_file = File.join(Suj::Pusher.config.certs_path, @cert_key)
         @buffer = IO::Buffer.new
+        self.comm_inactivity_timeout = 60          # Close after 60 sec of inactivity
 
         File.open(@cert_file, "w") do |f|
           f.write @options[:cert]
