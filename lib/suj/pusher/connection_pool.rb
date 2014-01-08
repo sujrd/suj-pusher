@@ -19,8 +19,10 @@ module Suj
 
       def initialize(daemon)
         @pool = {}
+        @feedback_pool = {}
         @daemon = daemon
         @mutex = Mutex.new
+        @feedback_mutex = Mutex.new
         @invalid_tokens = {}
         @processing_ids = {}
       end
@@ -42,6 +44,24 @@ module Suj
         raise UnknownConnection
       end
 
+      def get_feedback_connection(options = {})
+        if options.has_key?(:cert)
+          if options.has_key?(:development) && options[:development]
+            return feedback_sandbox_connection(options)
+          else
+            return feedback_connection(options)
+          end
+        end
+        return nil
+      end
+
+      def remove_feedback_connection(key)
+        @feedback_mutex.synchronize {
+          info "Removing feedback connection #{key}"
+          @feedback_pool.delete(key)
+        }
+      end
+
       def remove_connection(key)
         @mutex.synchronize {
           info "Removing connection #{key}"
@@ -58,6 +78,14 @@ module Suj
         return true if ! @invalid_tokens[conn]
         return false if @invalid_tokens[conn].has_key?(token)
         return true
+      end
+
+      # Method that creates APN feedback connections
+      def feedback
+        @pool.each do |k, conn|
+          next if ! conn.is_a?(Suj::Pusher::APNConnection)
+          conn = get_feedback_connection(conn.options)
+        end
       end
 
       private
@@ -79,18 +107,18 @@ module Suj
       end
 
       def feedback_connection(options = {})
-        cert = Digest::SHA1.hexdigest("FEEDBACK" + options[:cert])
-        info "APN Feedback connection #{cert}"
-        @mutex.synchronize do
-          @pool[cert] ||= EM.connect(FEEDBACK_GATEWAY, FEEDBACK_PORT, APNFeedbackConnection, self, options)
+        cert = Digest::SHA1.hexdigest(options[:cert])
+        info "Get APN feedback connection #{cert}"
+        @feedback_mutex.synchronize do
+          @feedback_pool[cert] ||= EM.connect(FEEDBACK_GATEWAY, FEEDBACK_PORT, APNFeedbackConnection, self, options)
         end
       end
 
       def feedback_sandbox_connection(options = {})
-        cert = Digest::SHA1.hexdigest("FEEDBACK" + options[:cert])
-        info "APN Sandbox Feedback connection #{cert}"
-        @mutex.synchronize do
-          @pool[cert] ||= EM.connect(FEEDBACK_SANDBOX, FEEDBACK_PORT, APNFeedbackConnection, self, options)
+        cert = Digest::SHA1.hexdigest(options[:cert])
+        info "Get APN sandbox feedback connection #{cert}"
+        @feedback_mutex.synchronize do
+          @feedback_pool[cert] ||= EM.connect(FEEDBACK_SANDBOX, FEEDBACK_PORT, APNFeedbackConnection, self, options)
         end
       end
 
