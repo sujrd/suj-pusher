@@ -103,14 +103,6 @@ module Suj
         end
       end
 
-      def apn_connection(options = {})
-        cert = Digest::SHA1.hexdigest options[:cert]
-        info "APN connection #{cert}"
-        @mutex.synchronize do
-          @pool[cert] ||= EM.connect(APN_GATEWAY, APN_PORT, APNConnection, self, options)
-        end
-      end
-
       def wns_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:secret]
         info "WNS connection #{cert}"
