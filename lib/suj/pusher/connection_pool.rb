@@ -12,6 +12,8 @@ module Suj
       APN_GATEWAY = "gateway.push.apple.com"
       FEEDBACK_SANDBOX = "feedback.sandbox.push.apple.com"
       FEEDBACK_GATEWAY = "feedback.push.apple.com"
+      CONNECTION_EXPIRY = 60*60*24*30  # Approx 1 month
+      TOKEN_EXPIRY      = 60*60*24*7   # Approx 1 week
       APN_PORT = 2195
       FEEDBACK_PORT = 2196
 
@@ -23,8 +25,7 @@ module Suj
         @daemon = daemon
         @mutex = Mutex.new
         @feedback_mutex = Mutex.new
-        @invalid_tokens = {}
-        @processing_ids = {}
+        @invalid_tokens = Vash.new
       end
 
       def get_connection(options = {})
@@ -70,8 +71,8 @@ module Suj
       end
 
       def invalidate_token(conn, token)
-        @invalid_tokens[conn] ||= {}
-        @invalid_tokens[conn][token] = Time.now.to_s
+        @invalid_tokens[conn, CONNECTION_EXPIRY] = Vash.new if @invalid_tokens[conn].nil?
+        @invalid_tokens[conn][token, TOKEN_EXPIRY] = Time.now.to_s
       end
 
       def valid_token?(conn, token)
@@ -82,6 +83,9 @@ module Suj
 
       # Method that creates APN feedback connections
       def feedback
+        @invalid_tokens.cleanup!
+        @invalid_tokens.each { |k,v| v.cleanup! if v }
+
         @pool.each do |k, conn|
           next if ! conn.is_a?(Suj::Pusher::APNConnection)
           conn = get_feedback_connection(conn.options)
