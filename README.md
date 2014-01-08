@@ -59,7 +59,7 @@ To start the server run:
 To stop the server run:
 
 ```
-/path/to/bin/pusher start -H localhost -P 6379 -b 0 -n pusher -p /var/run/pids
+/path/to/bin/pusher stop -H localhost -P 6379 -b 0 -n pusher -p /var/run/pids
 ```
 
 If you set a piddir (using -p option) when starting the server then you must supply the same option when stopping or restarting the server.
