@@ -5,6 +5,7 @@ require 'openssl'
 require 'em-hiredis'
 require "multi_json"
 require 'fileutils'
+require 'fiber'
 
 module Suj
   module Pusher
@@ -16,10 +17,16 @@ module Suj
       def start
         info "Starting pusher daemon"
         info " subsribe to push messages from #{redis_url} namespace #{redis_namespace}"
-        @last_feedback = Time.now
-        @last_sandbox_feedback = Time.now
         EM.run do
-          wait_msg
+
+          EM.add_periodic_timer(FEEDBACK_TIME) do
+            info "Starting APN feedback service"
+            pool.feedback
+          end
+
+          Fiber.new {
+            loop
+          }.resume
         end
       end
 
@@ -34,55 +41,54 @@ module Suj
 
       private
 
-      def wait_msg
-        defer = redis.brpop "#{redis_namespace}:#{MSG_QUEUE}", 0
+      def loop
+        msg = get_msg
+        return next_tick { loop } if msg.nil?
+        conn = get_connection(msg)
+        return next_tick { loop } if conn.nil?
+        conn.deliver(msg)
+        next_tick { loop }
+      end
+
+      def next_tick(&blk)
+        EM.next_tick { Fiber.new { blk.call }.resume }
+      end
+
+      def msg_queue
+        @msg_queue ||= "#{redis_namespace}:#{MSG_QUEUE}"
+      end
+
+      def get_msg
+        f = Fiber.current
+        defer = redis.brpop msg_queue, 0
         defer.callback do |_, msg|
+          info "Received message"
           begin
-            info "RECEIVED MESSAGE"
             data = Hash.symbolize_keys(MultiJson.load(msg))
-            info "GET CONNECTION"
-            conn = pool.get_connection(data)
-            conn.deliver(data)
-            info "SENT MESSAGE"
-            retrieve_feedback(data)
+            f.resume(data)
           rescue MultiJson::LoadError
-            warn("Received invalid json data, discarding msg")
-          rescue ConnectionPool::UnknownConnection
-            warn("Could not determine connetion type for message")
+            warn("Message has bad json format, discarding")
+            f.resume(nil)
           rescue => e
-            error("Error sending notification : #{e}")
-            error e.backtrace
+            error(e)
+            f.resume(nil)
           end
-          EM.next_tick { wait_msg }
         end
         defer.errback do |e|
           error e
-          EM.next_tick { wait_msg }
+          f.resume(nil)
         end
+        return Fiber.yield
       end
 
-      def retrieve_feedback(msg)
-        if msg.has_key?(:cert)
-          if msg.has_key?(:development) && msg[:development]
-            feedback_sandbox_connection(msg)
-          else
-            feedback_connection(msg)
-          end
+      def get_connection(options)
+        info "Get connection"
+        begin
+          return pool.get_connection(options)
+        rescue ConnectionPool::UnknownConnection
+          error "Could not find connection"
+          return nil
         end
-      end
-
-      def feedback_connection(msg)
-        return Time.now - @last_feedback < FEEDBACK_TIME
-        info "Get feedback information"
-        conn = pool.feedback_connection(msg)
-        @last_feedback = Time.now
-      end
-
-      def feedback_sandbox_connection(msg)
-        return if Time.now - @last_sandbox_feedback < FEEDBACK_TIME
-        info "Get feedback sandbox information"
-        conn = pool.feedback_sandbox_connection(msg)
-        @last_sandbox_feedback = Time.now
       end
 
       def redis_url

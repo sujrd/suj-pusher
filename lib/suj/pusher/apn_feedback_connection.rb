@@ -12,7 +12,7 @@ module Suj
         @disconnected = true
         @options = options
         @pool = pool
-        @cert_key = Digest::SHA1.hexdigest("FEEDBACK" + @options[:cert])
+        @cert_key = Digest::SHA1.hexdigest(@options[:cert])
         @cert_file = File.join(Suj::Pusher.config.certs_path, @cert_key)
         @buffer = IO::Buffer.new
         self.comm_inactivity_timeout = 10          # Close after 10 sec of inactivity
@@ -24,6 +24,7 @@ module Suj
           cert_chain_file: @cert_file,
           verify_peer: false
         }
+        info "APN feedback #{@cert_key}: Creating"
       end
 
       def disconnected?
@@ -31,7 +32,7 @@ module Suj
       end
 
       def post_init
-        info "APN Feedback Connection init "
+        info "APN feedback #{@cert_key}: Connection init "
         start_tls(@ssl_options)
       end
 
@@ -48,19 +49,20 @@ module Suj
         while @buffer.size >= 38
           timestamp, size = @buffer.read(6).unpack("Nn")
           token = @buffer.read(size)
-          puts " FEEDBACK TIMESTAMP: #{timestamp}  SIZE: #{size} TOKEN: #{token}"
+          info "APN feedback #{@cert_key}: TIMESTAMP: #{timestamp} SIZE: #{size} TOKEN: #{token}"
+          @pool.invalidate_token(@cert_key, token)
         end
       end
 
       def connection_completed
-        info "APN Feedback Connection established..."
+        info "APN feedback #{@cert_key}: Connection established..."
         @disconnected = false
       end
 
       def unbind
-        info "APN Feedback Connection closed..."
+        info "APN feedback #{@cert_key}: Connection closed..."
         @disconnected = true
-        @pool.remove_connection(@cert_key)
+        @pool.remove_feedback_connection(@cert_key)
       end
     end
   end
