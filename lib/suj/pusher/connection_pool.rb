@@ -41,8 +41,10 @@ module Suj
       end
 
       def remove_connection(key)
-        info "Removing connection #{key}"
-        info "Connection not found" unless @pool.delete(key)
+        @mutex.synchronize {
+          info "Removing connection #{key}"
+          info "Connection not found" unless @pool.delete(key)
+        }
       end
 
       private
