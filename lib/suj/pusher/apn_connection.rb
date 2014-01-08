@@ -1,11 +1,14 @@
 require "eventmachine"
 require "iobuffer"
-
 require "base64"
+require 'suj/pusher/monkey/vash'
+
 module Suj
   module Pusher
     class APNConnection < EM::Connection
       include Suj::Pusher::Logger
+
+      @@last_id = 0
 
       ERRORS = {
         0 => "No errors encountered",
@@ -26,12 +29,15 @@ module Suj
         @disconnected = true
         @pool = pool
         @options = options
+        @processing_ids = Vash.new
         @cert_key = Digest::SHA1.hexdigest(@options[:cert])
         @cert_file = File.join(Suj::Pusher.config.certs_path, @cert_key)
         @buffer = IO::Buffer.new
+
         File.open(@cert_file, "w") do |f|
           f.write @options[:cert]
         end
+
         @ssl_options = {
           private_key_file: @cert_file,
           cert_chain_file: @cert_file,
@@ -47,22 +53,39 @@ module Suj
         begin
           @notifications = []
           data[:apn_ids].each do |apn_id|
-            @notifications << Suj::Pusher::ApnNotification.new(data.merge({token: apn_id}))
+            if ! @pool.valid_token?(@cert_key, apn_id)
+              warn "Skipping invalid #{apn_id} APN id"
+              next
+            end
+            notification = Suj::Pusher::ApnNotification.new(data.merge({token: apn_id, id: @@last_id}))
+            @processing_ids[@@last_id.to_s] = apn_id
+            @@last_id += 1
+            @notifications << notification
           end
-          if ! disconnected?
-            info "APN delivering data"
-            send_data(@notifications.join)
-            info "APN push notification sent"
-            @notifications = nil
-            info "APN delivered data"
-          else
-            info "APN connection unavailable"
+
+          @processing_ids.cleanup!
+          info "Processing list size #{@processing_ids.size}"
+
+          if @notifications.empty?
+            warn "No valid tokens, skip message"
+            return
           end
+
+          if disconnected?
+            warn "Connection not ready yet, queue notifications for later"
+            return
+          end
+
+          info "APN delivering data"
+          send_data(@notifications.join)
+          @notifications = nil
+          info "APN delivered data"
         rescue Suj::Pusher::ApnNotification::PayloadTooLarge => e
           error "APN notification payload too large."
           debug @notifications.join.inspect
         rescue => ex
           error "APN notification error : #{ex}"
+          error ex.backtrace
         end
       end
 
@@ -85,6 +108,10 @@ module Suj
           cmd, status, id = data.unpack("CCN")
           if cmd != 8
             error "APN push response command differs from 8"
+          elsif status == 8
+            token = @processing_ids[id.to_s]
+            @pool.invalidate_token(@cert_key, token)
+            warn "APN invalid (id: #{id}) token #{token}"
           elsif status != 0
             error "APN push error received: #{ERRORS[status]} for id #{id}"
           end
@@ -94,13 +121,13 @@ module Suj
       def connection_completed
         info "APN Connection established..."
         @disconnected = false
-        if ! @notifications.nil?
-          info "EST - APN delivering data"
-          send_data(@notifications.join)
-          info "APN push notification sent"
-          @notifications = nil
-          info "EST - APN delivered data"
-        end
+
+        return if @notifications.nil? || @notifications.empty?
+
+        info "EST - APN delivering data"
+        send_data(@notifications.join)
+        @notifications = nil
+        info "EST - APN delivered data"
       end
 
       def unbind

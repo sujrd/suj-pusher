@@ -21,6 +21,8 @@ module Suj
         @pool = {}
         @daemon = daemon
         @mutex = Mutex.new
+        @invalid_tokens = {}
+        @processing_ids = {}
       end
 
       def get_connection(options = {})
@@ -45,6 +47,17 @@ module Suj
           info "Removing connection #{key}"
           info "Connection not found" unless @pool.delete(key)
         }
+      end
+
+      def invalidate_token(conn, token)
+        @invalid_tokens[conn] ||= {}
+        @invalid_tokens[conn][token] = Time.now.to_s
+      end
+
+      def valid_token?(conn, token)
+        return true if ! @invalid_tokens[conn]
+        return false if @invalid_tokens[conn].has_key?(token)
+        return true
       end
 
       private
