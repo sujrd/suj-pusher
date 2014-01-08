@@ -46,6 +46,10 @@ module Suj
         }
       end
 
+      def options
+        @options
+      end
+
       def disconnected?
         @disconnected
       end
