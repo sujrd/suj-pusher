@@ -59,7 +59,7 @@ module Suj
 
       def apn_sandbox_connection(options = {})
         cert = Digest::SHA1.hexdigest options[:cert]
-        info "APN connection #{cert}"
+        info "APN sandbox connection #{cert}"
         @mutex.synchronize do
           @pool[cert] ||= EM.connect(APN_SANDBOX, APN_PORT, APNConnection, self, options)
         end
