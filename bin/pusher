@@ -54,6 +54,11 @@ config.redis_db = redis_db
 config.redis_namespace = redis_namespace
 Suj::Pusher.config.update(config)
 
+if ARGV and ARGV[0] == 'start_nodetach'
+  PusherDaemon.start()
+  Process.exit
+end
+
 PusherDaemon.spawn!(
   sync_log: true,
   working_dir: Dir.pwd,
