@@ -36,7 +36,7 @@ bundle install
 To run the server simply run the pusher daemon:
 
 ```
-pusher start|stop|restart|status  <options>
+pusher start|start_nodetach|stop|restart|status  <options>
 ```
 
 options:
@@ -55,6 +55,13 @@ To start the server run:
 ```
 /path/to/bin/pusher start -H localhost -P 6379 -b 0 -n pusher -p /var/run/pids
 ```
+
+To start the server in nodetach mode (for supervisor):
+
+```
+/path/to/bin/pusher start_nodetach -H localhost -P 6379 -b 0 -n pusher
+```
+
 
 To stop the server run:
 
