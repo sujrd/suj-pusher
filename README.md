@@ -1,6 +1,8 @@
 # Suj Pusher Server
 
-This is a simple but enterprise level pusher server that can push notifications to iOS and Android devices using the APN and GCM push services respectively.
+This is a simple pusher server that can push notifications to iOS and Android devices using the APN and GCM push services respectively.
+
+NOTICE: This project is deprecated and no longer under development. With new services like [AWS SNS](https://aws.amazon.com/sns/) and [Google FCM](https://firebase.google.com/docs/cloud-messaging/) this daemon is no longer relevant.
 
 ## Features
 
@@ -100,10 +102,32 @@ Example JSON message:
 - apn_ids: This is an array with the list of iOS client tokens to which the push notification is to be sent. These are the tokens you get from the iOS devices when they register for APN push notifications.
 - gcm_ids: This is an array with the list of Android client ids to which the push notification is to be sent. These IDs are obtained on the devices when they register for GCM push notifications. You may only have up to 1000 ids in this array.
 - development: This can be true or false and indicates if the push notification is to be sent using the APN sandbox gateway (yes) or the APN production gateway (no). This option only affects push notifications to iOS devices and is assumed yes if not provided.
-- cert: This is a string representation of the certificate used to send push notifications via the APN network. Simply read the cert.pem file as string and plug it in this field.
+- cert: This is a string representation of the private key used to send push notifications via the APN network in PEM format.
 - api_key: This is the secret api_key used to send push notifications via the GCM network. This is the key you get from the Google API console.
 - time_to_live: Time in seconds the message would be stored on the cloud in case the destination device is not available at the moment. The default value is zero that means the message is discarded if the destination is not reachable at the moment the notification is sent. Note that even if you set this value larger than zero there are limitations that may prevent the message from arriving. For example Google allows to store up to 4 sync messages or 100 payload messages for up to time_to_live messages or max 4 weeks while Apple only stores the last message up to to time_to_live seconds.
 - data: This is a custom hash that is sent as push notification to the devices. For GCM this hash may contain anything you want as long as its size do not exceed 4096. For APN this data hash MUST contain an *aps* hash that follows Apple push notification format.
+
+#### Apple Certificate
+
+Usually you get the Apple certificates and private key in a single p12 file. To extract the key needed to send push notifications you can use the following command:
+
+    openssl pkcs12 -in MyCert.p12 -out MyCert.key.pem -nocerts -nodes
+
+the contents of the MyCert.key.pem is the one you need to set in the cert key on the hash. In ruby the following code can be used to generate the hash:
+
+```ruby
+msg = {
+  apn_ids: ["apns id"],
+  development: false,
+  cert: File.read("MyCert.key.pem"),
+  data: {
+    aps: {
+      alert: "This is the message #{rand(100)}"
+    }
+  }
+
+}
+```
 
 #### Apple *aps* hash
 
